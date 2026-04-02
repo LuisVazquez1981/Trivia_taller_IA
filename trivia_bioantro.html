@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>BioAntropo: El Millón Genómico</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #000411;
+            --blue-glow: #003566;
+            --gold: #ffc300;
+            --white: #ffffff;
+            --correct: #2a9d8f;
+            --wrong: #e76f51;
+            --tension-speed: 2s;
+        }
+
+        body { 
+            background: var(--bg-deep); color: var(--white); 
+            font-family: 'Roboto', sans-serif; margin: 0; padding: 0;
+            width: 700px; height: 490px; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        #game-container {
+            width: 100%; height: 100%; border: 2px solid var(--gold);
+            box-sizing: border-box; position: relative;
+            background: radial-gradient(circle, var(--blue-glow) 0%, var(--bg-deep) 100%);
+        }
+
+        .screen { display: flex; flex-direction: column; height: 100%; width: 100%; position: relative; overflow: hidden; }
+        .hidden { display: none !important; }
+
+        /* --- ESTILOS PANTALLA INICIAL --- */
+        #scr-intro { background: #000; justify-content: center; align-items: center; }
+        
+        .intro-bg {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover; opacity: 0.8; z-index: 1;
+        }
+
+        .intro-content { 
+            position: relative; 
+            z-index: 2; 
+            text-align: center; 
+            height: 100%; 
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; 
+            align-items: center;
+            padding-bottom: 40px; 
+            box-sizing: border-box;
+        }
+
+        /* --- ESTILOS PANTALLA JUEGO --- */
+        .tv-studio-top { width: 100%; height: 220px; object-fit: cover; border-bottom: 2px solid var(--gold); }
+        .header { display: flex; justify-content: space-between; padding: 10px 20px; font-size: 20px; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--gold); }
+        #trivia-section { position: absolute; bottom: 20px; left: 0; width: 100%; padding: 0 40px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; }
+        .q-box { background: rgba(0, 0, 0, 0.9); border: 2px solid var(--white); border-radius: 40px; padding: 12px 20px; text-align: center; font-size: 18px; width: 100%; margin-bottom: 15px; }
+        #options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+        .opt-box { background: rgba(0, 0, 0, 0.85); border: 1px solid var(--gold); border-radius: 25px; padding: 10px 15px; cursor: pointer; font-size: 15px; transition: 0.2s; }
+        .opt-box:hover { background: var(--gold); color: black; }
+        .opt-box span { color: var(--gold); margin-right: 8px; font-weight: bold; }
+
+        /* --- ESTILOS PANTALLA FINAL --- */
+        .scientist-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.6; z-index: 1; }
+        .final-text-container { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 40px; box-sizing: border-box; }
+
+        .main-btn { background: var(--gold); color: #000; border: none; padding: 12px 40px; font-size: 26px; cursor: pointer; font-family: 'VT323'; font-weight: bold; box-shadow: 0 0 15px rgba(255,195,0,0.5); transition: 0.3s; }
+        .main-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(255,195,0,0.8); }
+
+        #feedback-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; display: flex; align-items: center; justify-content: center; }
+        .money { position: absolute; color: #85bb65; font-weight: bold; font-size: 24px; z-index: 500; pointer-events: none; animation: fall linear forwards; }
+        @keyframes fall { to { transform: translateY(500px) rotate(360deg); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<audio id="snd-aplauso" src="https://pixabay.com/es/sound-effects/gente-applause-108368/" preload="auto"></audio>
+<audio id="snd-decepcion" src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Failure_sound_effect.mp3" preload="auto"></audio>
+<audio id="snd-final" src="https://upload.wikimedia.org/wikipedia/commons/0/07/Win_sound_effect.mp3" preload="auto"></audio>
+
+<div id="game-container">
+    <div id="scr-intro" class="screen">
+        <img class="intro-bg" src="https://pixabay.com/images/download/u_jz6xju0pyu-movie-10204898_1920.png">
+        <div class="intro-content">
+            <button class="main-btn" onclick="iniciarJuego()">QUE COMIENCE EL JUEGO</button>
+        </div>
+    </div>
+
+    <div id="scr-game" class="screen hidden">
+        <img src="https://pixabay.com/images/download/u_jz6xju0pyu-tv-10198134_1920.png" class="tv-studio-top">
+        <div class="header">
+            <div>PREGUNTA: <span id="lvl-tag">1</span>/8</div>
+            <div style="color:var(--gold); font-weight:bold;">POZO: <span id="score-tag">$0</span></div>
+        </div>
+        <div id="trivia-section">
+            <div class="q-box" id="q-text"></div>
+            <div id="options-grid"></div>
+        </div>
+    </div>
+
+    <div id="feedback-overlay" class="hidden">
+        <div class="screen" style="justify-content:center; align-items:center; padding: 40px;">
+            <div id="feedback-status" style="font-size: 45px; font-family: 'VT323';"></div>
+            <div id="feedback-money" style="font-size: 26px; color: var(--gold); margin: 10px 0;"></div>
+            <div id="feedback-info" style="font-size: 17px; color: #ccc; text-align: center; border-top:1px solid #333; padding-top:15px; line-height: 1.3;"></div>
+            <button class="main-btn" style="margin-top:20px;" onclick="siguiente()">CONTINUAR</button>
+        </div>
+    </div>
+
+    <div id="scr-final" class="screen hidden">
+        <div class="final-text-container">
+            <h1 id="res-title" style="font-size: 40px; font-family:'VT323'; text-align:center;"></h1>
+            <p id="res-text" style="font-size: 20px; text-align:center; color: white;"></p>
+            <button class="main-btn" style="margin-top: 30px;" onclick="location.reload()">REINTENTAR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const bancoPreguntas = [
+        { q: "¿Qué porcentaje de uruguayos tiene linajes mitocondriales indígenas?", o: ["1-2%", "34%", "0%", "75%"], a: 1, info: "Estudios de Mónica Sans y su equipo confirman este aporte materno, producto del mestizaje asimétrico entre mujeres indígenas y criollos durante los siglos XVIII y XIX." },
+        { q: "El 'Efecto Fundador' en el Cono Sur provocó:", o: ["Baja diversidad inicial", "Alta variabilidad", "Inmunidad total", "Gigantismo"], a: 0, info: "Pocos individuos dan origen a una población con menor variedad genética, representando una muestra no necesariamente representativa de la población original." },
+        { q: "¿Qué marcador rastrea la línea patrilineal?", o: ["mtDNA", "Cromosoma X", "Cromosoma Y", "Autosomas"], a: 2, info: "El cromosoma Y se hereda de padre a hijo varón casi sin cambios, permitiendo establecer una línea patrilineal." },
+        { q: "El 'mestizaje asimétrico' indica mayor aporte de:", o: ["Madres europeas", "Madres indígenas", "Padres indígenas", "Solo hombres"], a: 1, info: "Refleja la historia social de gran parte de Sudamérica: hombres europeos o criollos y mujeres nativas." },
+        { q: "Los 'cerritos de indios' funcionaron como:", o: ["Pirámides de oro", "Aldeas y cementerios", "Montículos naturales", "Templos solares"], a: 1, info: "Son construcciones prehispánicas del este uruguayo que llegan hasta los 5000 años de antigüedad; se han identificado enterramientos humanos en ellos." },
+        { q: "¿Qué Haplogrupo mitocondrial es común en indígenas locales?", o: ["Haplogrupo H", "Haplogrupo C1", "Haplogrupo X", "Haplogrupo J"], a: 1, info: "El C1 es un linaje fundador con gran presencia en Uruguay, mostrando continuidad en el territorio por al menos 1600 años." },
+        { q: "La bioantropología dental estudia:", o: ["Caries modernas", "Morfología y desgaste", "Limpieza dental", "Prótesis"], a: 1, info: "Los dientes preservan datos de dieta y ancestría por milenios, siendo fuentes ricas de información cultural y biológica." },
+        { q: "Las migraciones hispanas coloniales fueron mayormente:", o: ["Masculinas", "Femeninas", "Equilibradas", "Infantiles"], a: 0, info: "Este sesgo migratorio masculino explica la diferencia entre los resultados de ADNmt (materno) y Cromosoma Y (paterno) en la actualidad." },
+        { q: "¿Qué porcentaje de ADN neandertal conservan los no africanos?", o: ["10-15%", "50%", "1-4%", "0%"], a: 2, info: "Resultado del cruce entre sapiens y neandertales en Oriente Medio y Europa hace miles de años." },
+        { q: "Los denisovanos fueron identificados principalmente en:", o: ["Sudáfrica", "Este de Asia", "Europa", "Sudamérica"], a: 1, info: "Identificados en la cueva de Denisova (Rusia); su mayor rastro genético hoy está en el sudeste asiático y Oceanía." },
+        { q: "¿Qué gen denisovano ayuda a los tibetanos en la altura?", o: ["Gen EPAS1", "Gen FOXP2", "Gen Lactasa", "Gen Queratina"], a: 0, info: "El gen EPAS1 ayuda a regular la respuesta a la baja concentración de oxígeno, herencia de la introgresión denisovana." },
+        { q: "La persistencia de la lactasa es un ejemplo de:", o: ["Deriva", "Co-evolución gen-cultura", "Efecto fundador", "Mutación negativa"], a: 1, info: "Surgió con el inicio de la ganadería, permitiendo aprovechar el recurso nutricional de la leche en adultos." },
+        { q: "La anemia falciforme ofrece ventaja contra:", o: ["Visión baja", "Malaria", "Debilidad ósea", "Grasas"], a: 1, info: "Ser portador confiere protección en zonas con malaria endémica, manteniendo la frecuencia de la mutación." },
+        { q: "El gen FOXP2 está relacionado con:", o: ["Visión", "Lenguaje y habla", "Bipedestación", "Inmunidad"], a: 1, info: "Es clave para articular lenguaje complejo; mutaciones en este gen afectan severamente la comunicación oral." },
+        { q: "¿Qué homínido habitaba Europa al llegar Sapiens?", o: ["Erectus", "Habilis", "Neanderthalensis", "Australopithecus"], a: 2, info: "Los neandertales habitaron Europa por 400.000 años; su desaparición coincide con la llegada de Sapiens." },
+        { q: "La 'Regla de Allen' predice que en climas fríos hay:", o: ["Extremidades cortas", "Extremidades largas", "Piel oscura", "Menos grasa"], a: 0, info: "Extremidades más cortas ayudan a retener el calor corporal al reducir la superficie expuesta." },
+        { q: "El pigmento que protege de la radiación UV es:", o: ["Hemoglobina", "Melanina", "Caroteno", "Queratina"], a: 1, info: "La melanina es una adaptación a la intensidad solar, con mayor expresión en regiones de alta radiación." },
+        { q: "Una reducción drástica de población se llama:", o: ["Selección", "Cuello de botella", "Flujo génico", "Panmixia"], a: 1, info: "Reduce la diversidad genética drásticamente, a veces por migraciones de pocos individuos o eventos catastróficos." },
+        { q: "La adaptación al buceo de los Bajau se nota en su:", o: ["Pulmón", "Bazo", "Corazón", "Hígado"], a: 1, info: "Un bazo más grande inyecta glóbulos rojos oxigenados extra durante la inmersión." },
+        { q: "¿En qué continente se originó Homo sapiens?", o: ["Europa", "Asia", "África", "América"], a: 2, info: "Surgimos en África hace 300,000 años; América fue el último continente en ser ocupado (hace 20.000-40.000 años)." },
+        { q: "Los genes neandertales de queratina ayudaron a:", o: ["Correr", "Adaptación de piel/pelo", "Digestión", "Oído"], a: 1, info: "Facilitaron la adaptación a los climas fríos fuera de África a través de la piel y el cabello." },
+        { q: "¿Qué herramienta estima el tiempo al ancestro común?", o: ["Reloj molecular", "C14", "Estratigrafía", "Dendro"], a: 0, info: "Se basa en la tasa de mutación acumulada en el ADN para estimar tiempos de divergencia entre especies." },
+        { q: "La diabetes tipo 2 se asocia a la hipótesis del:", o: ["Gen ahorrador", "Gen gastador", "Gen mutante", "Gen longevo"], a: 0, info: "Propone que genes eficaces en tiempos de escasez resultan perjudiciales en la abundancia moderna." },
+        { q: "El estudio de enfermedades en restos antiguos es:", o: ["Paleontología", "Paleopatología", "Forense", "Arqueología"], a: 1, info: "Diagnostica infecciones y traumas en poblaciones pasadas a través de lesiones óseas y dentales." },
+        { q: "¿Qué marcador se hereda solo por vía materna?", o: ["Nuclear", "Cromosoma X", "ADN Mitocondrial", "Cromosoma Y"], a: 2, info: "El ADN mitocondrial proviene exclusivamente del óvulo; la transmisión paterna es prácticamente nula." },
+        { q: "La selección que favorece el promedio es:", o: ["Disruptiva", "Estabilizadora", "Direccional", "Deriva"], a: 1, info: "La selección estabilizadora elimina los extremos, como ocurre con el peso ideal al nacer." },
+        { q: "¿Qué homínido salió de África primero masivamente?", o: ["Habilis", "Homo erectus", "Sapiens", "Australopithecus"], a: 1, info: "Homo erectus se expandió por Eurasia hace casi 2 millones de años y desarrolló tecnología lítica achelense." },
+        { q: "La variación gradual de rasgos geográficamente es:", o: ["Variación clinal", "Variación racial", "Especiación", "Selección sexual"], a: 0, info: "La mayoría de los rasgos humanos varían de forma gradual (clinal) y no en grupos biológicos cerrados." }
+    ];
+
+    const escalaPremios = [10000, 20000, 50000, 100000, 250000, 500000, 750000, 1000000];
+    let mazo = [], indice = 0, puntos = 0;
+
+    function iniciarJuego() {
+        // Desbloqueo de audio para navegadores modernos
+        const audios = [document.getElementById('snd-aplauso'), document.getElementById('snd-decepcion'), document.getElementById('snd-final')];
+        audios.forEach(s => { s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(() => {}); });
+
+        mazo = [...bancoPreguntas].sort(() => Math.random() - 0.5).slice(0, 8);
+        document.getElementById('scr-intro').classList.add('hidden');
+        document.getElementById('scr-game').classList.remove('hidden');
+        indice = 0; puntos = 0;
+        mostrarPregunta();
+    }
+
+    function mostrarPregunta() {
+        const data = mazo[indice];
+        document.getElementById('lvl-tag').innerText = indice + 1;
+        document.getElementById('q-text').innerText = data.q;
+        const grid = document.getElementById('options-grid');
+        grid.innerHTML = '';
+        ['A','B','C','D'].forEach((letra, i) => {
+            const btn = document.createElement('div');
+            btn.className = 'opt-box';
+            btn.innerHTML = `<span>${letra}:</span> ${data.o[i]}`;
+            btn.onclick = () => validar(i);
+            grid.appendChild(btn);
+        });
+    }
+
+    function validar(elegida) {
+        const q = mazo[indice];
+        const esCorrecta = elegida === q.a;
+        const overlay = document.getElementById('feedback-overlay');
+        overlay.classList.remove('hidden');
+        document.getElementById('feedback-status').innerText = "PROCESANDO...";
+        
+        setTimeout(() => {
+            if(esCorrecta) {
+                puntos = escalaPremios[indice];
+                
+                // Reproducción de sonido
+                const idSonido = (indice === 7) ? 'snd-final' : 'snd-aplauso';
+                const audio = document.getElementById(idSonido);
+                audio.currentTime = 0;
+                audio.play().catch(e => console.warn("Audio bloqueado"));
+
+                if (indice === 7) { 
+                    document.getElementById('feedback-status').innerText = "¡EL MILLÓN ES TUYO!";
+                    lluviaDolares();
+                } else {
+                    document.getElementById('feedback-status').innerText = "¡CORRECTO!";
+                }
+
+                document.getElementById('feedback-status').style.color = "var(--correct)";
+                document.getElementById('feedback-money').innerText = "ACUMULADO: $" + puntos.toLocaleString();
+                document.getElementById('feedback-info').innerText = q.info;
+            } else {
+                const audioError = document.getElementById('snd-decepcion');
+                audioError.currentTime = 0;
+                audioError.play().catch(e => console.warn("Audio bloqueado"));
+                
+                document.getElementById('feedback-status').innerText = "INCORRECTO";
+                document.getElementById('feedback-status').style.color = "var(--wrong)";
+                document.getElementById('feedback-money').innerText = "LO HAS PERDIDO TODO";
+                puntos = 0;
+            }
+            document.getElementById('score-tag').innerText = "$" + puntos.toLocaleString();
+        }, (indice === 7 ? 2000 : 800));
+    }
+
+    function siguiente() {
+        document.getElementById('feedback-overlay').classList.add('hidden');
+        if(puntos === 0) return pantallaFinal(false);
+        indice++;
+        if(indice < 8) mostrarPregunta();
+        else pantallaFinal(true);
+    }
+
+    function pantallaFinal(victoria) {
+        document.getElementById('scr-game').classList.add('hidden');
+        const scrFinal = document.getElementById('scr-final');
+        scrFinal.classList.remove('hidden');
+        
+        const tit = document.getElementById('res-title');
+        const txt = document.getElementById('res-text');
+        
+        if(victoria) {
+            scrFinal.insertAdjacentHTML('afterbegin', '<img src="https://pixabay.com/images/download/u_jz6xju0pyu-scientist-10204888_1920.png" class="scientist-bg">');
+            tit.innerText = "¡FELICITACIONES, BIOANTRÓPOLOG@!";
+            txt.innerText = "Tienes 1 MILLÓN (de pesos) para invertir en tu investigación genómica.";
+            tit.style.color = "var(--correct)";
+        } else {
+            const bg = scrFinal.querySelector('.scientist-bg'); if(bg) bg.remove();
+            tit.innerText = "PERDISTE EL MILLÓN";
+            txt.innerText = "Deberás buscar financiación por otro lado o estudiar más la genética local.";
+            tit.style.color = "var(--wrong)";
+        }
+    }
+
+    function lluviaDolares() {
+        for(let i=0; i<60; i++) {
+            setTimeout(() => {
+                const d = document.createElement('div');
+                d.className = 'money'; d.innerText = "$";
+                d.style.left = Math.random() * 680 + "px"; d.style.top = "-50px";
+                d.style.animationDuration = (Math.random() * 2 + 1) + "s";
+                document.getElementById('game-container').appendChild(d);
+            }, i * 80);
+        }
+    }
+
+    function precargarTodo() {
+        const imgs = [
+            "https://pixabay.com/images/download/u_jz6xju0pyu-movie-10204898_1920.png",
+            "https://pixabay.com/images/download/u_jz6xju0pyu-tv-10198134_1920.png",
+            "https://pixabay.com/images/download/u_jz6xju0pyu-scientist-10204888_1920.png"
+        ];
+        imgs.forEach(url => { const i = new Image(); i.src = url; });
+        document.querySelectorAll('audio').forEach(a => a.load());
+    }
+
+    window.onload = precargarTodo;
+</script>
+</body>
+</html>
